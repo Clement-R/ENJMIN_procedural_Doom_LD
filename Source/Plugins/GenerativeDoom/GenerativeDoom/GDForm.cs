@@ -334,10 +334,12 @@ namespace GenerativeDoom
 
             // Right
             l1.v2 = l1.v1 = pv;
-            l1.v1.x += pwidth;
-            l1.v1.y += pwidth;
+            l1.v1.x += width;
             l1.v2.x += width + 512;
-            l1.v2.y += width + 512;
+            bool droite = !checkIntersect(l1);
+            l1.v1.y = l1.v2.y = l1.v1.y + height / 2;
+            droite = droite && !checkIntersect(l1);
+            dirOk[0] = droite;
 
             /*
             l1.v2 = l1.v1 = pv;

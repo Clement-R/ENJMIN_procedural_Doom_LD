@@ -158,7 +158,7 @@ namespace GenerativeDoom
                     if (ti.Category.Name == category)
                     {
                         t.Type = ti.Index;
-                        Console.WriteLine("Add thing cat " + category + " for thing at pos " + pos);
+                        // Console.WriteLine("Add thing cat " + category + " for thing at pos " + pos);
                         found = true;
                         if (r.NextDouble() > proba)                     
                             break;
@@ -167,12 +167,12 @@ namespace GenerativeDoom
                 }
                 if (!found)
                 {
-                    Console.WriteLine("###### Could not find category " + category + " for thing at pos " + pos);
+                    // Console.WriteLine("###### Could not find category " + category + " for thing at pos " + pos);
                 }else
                     t.Rotate(0);
             }else
             {
-                Console.WriteLine("###### Could not add thing for cat " + category + " at pos " + pos);
+                // Console.WriteLine("###### Could not add thing for cat " + category + " at pos " + pos);
             }
 
             return t;
@@ -183,7 +183,7 @@ namespace GenerativeDoom
             if (pos.x < General.Map.Config.LeftBoundary || pos.x > General.Map.Config.RightBoundary ||
                 pos.y > General.Map.Config.TopBoundary || pos.y < General.Map.Config.BottomBoundary)
             {
-                Console.WriteLine( "Error Generaetive Doom: Failed to insert thing: outside of map boundaries.");
+                // Console.WriteLine( "Error Generaetive Doom: Failed to insert thing: outside of map boundaries.");
                 return null;
             }
 
@@ -320,6 +320,12 @@ namespace GenerativeDoom
         }
 
         private int getDirection(Vector2D pv, float width, float pwidth, float height, float pheight) {
+            /*
+             * For each side :
+             *      - Get middle of the line def
+             *      - Cast a ray and check intersect
+            */
+
             Random r = new Random();
 
             // We check all 4 directions to see where we can put it
@@ -329,23 +335,32 @@ namespace GenerativeDoom
             // Right
             l1.v2 = l1.v1 = pv;
             l1.v1.x += pwidth;
+            l1.v1.y += pwidth;
+            l1.v2.x += width + 512;
+            l1.v2.y += width + 512;
+
+            /*
+            l1.v2 = l1.v1 = pv;
+            l1.v1.x += pwidth;
             l1.v2.x += width + 512;
             bool droite = !checkIntersect(l1);
             l1.v1.y = l1.v2.y = l1.v1.y + height;
             droite = droite && !checkIntersect(l1);
             dirOk[0] = droite;
-            // Console.WriteLine("right ok:" + droite);
+            */
 
             // Left
+            /*
             l1.v2 = l1.v1 = pv;
             l1.v2.x -= width + 512;
             bool gauche = !checkIntersect(l1);
             l1.v1.y = l1.v2.y = l1.v1.y + height;
             gauche = gauche && !checkIntersect(l1);
             dirOk[1] = gauche;
-            // Console.WriteLine("left ok:" + gauche);
+            */
 
             // Up
+            /*
             l1.v2 = l1.v1 = pv;
             l1.v1.y = l1.v2.y = l1.v1.y + pheight;
             l1.v2.y += height + 512;
@@ -353,29 +368,32 @@ namespace GenerativeDoom
             l1.v1.x = l1.v2.x = l1.v1.x + width;
             haut = haut && !checkIntersect(l1);
             dirOk[2] = haut;
-            // Console.WriteLine("up ok:" + haut);
+            */
 
             // Down
+            /*
             l1.v2 = l1.v1 = pv;
             l1.v2.y -= height + 512;
             bool bas = !checkIntersect(l1);
             l1.v1.x = l1.v2.x = l1.v1.x + width;
             bas = bas && !checkIntersect(l1);
             dirOk[3] = bas;
-            // Console.WriteLine("Down ok:" + bas);
+            */
 
-            bool oneDirOk = haut || bas || gauche || droite;
+            // bool oneDirOk = haut || bas || gauche || droite;
+            bool oneDirOk = false;
 
             // TODO : Shrink room size to fit
 
             int nextDir = 0;
             if (!oneDirOk) {
-                // Console.WriteLine("No direction available");
+                Console.WriteLine("No direction available");
             }
             else {
                 int nbTry = 0;
                 while ((!dirOk[nextDir]) && nbTry++ < 100)
                     nextDir = r.Next() % 4;
+                    Console.WriteLine(nextDir);
             }
             
             return nextDir;
@@ -410,12 +428,11 @@ namespace GenerativeDoom
 
                 // Get previous sector position
                 pv = v.pos;
-                Console.WriteLine("Previous pos : " + v.pos.x + " : " + v.pos.y);
                 int nextDir = 0;
 
                 // Choose height and width of next sector
-                float width = Math.Abs((float)(r.Next() % 10) * 64.0f + 128.0f);
-                float height = Math.Abs((float)(r.Next() % 10) * 64.0f + 128.0f);
+                float width = (float)(r.Next() % 10) * 64.0f + 128.0f;
+                float height = (float)(r.Next() % 10) * 64.0f + 128.0f;
 
                 if (i == 0) {
                     // Set properties of the sector
@@ -456,7 +473,7 @@ namespace GenerativeDoom
                             v.pos.y += height;
                             break;
                         case 3:
-                            Console.WriteLine("Down !");
+                            // Console.WriteLine("Down !");
                             v.pos.x += (width / 2) - (doorWidth / 2);
                             v.pos.y -= doorHeight;
                             break;
@@ -575,7 +592,7 @@ namespace GenerativeDoom
 
                 // Handle thread interruption
                 try { Thread.Sleep(0); }
-                catch (ThreadInterruptedException) { Console.WriteLine(">>>> thread de generation interrompu at sector " + i); break; }
+                catch (ThreadInterruptedException) {  /*Console.WriteLine(">>>> thread de generation interrompu at sector " + i);*/ break; }
             }
         }
 

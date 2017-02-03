@@ -386,10 +386,8 @@ namespace GenerativeDoom
                 pv = v.pos;
 
                 // Choose height and width of next sector
-                // float width = (float)(r.Next() % 10) * 64.0f + 128.0f;
-                float width = 256.0f;
-                // float height = (float)(r.Next() % 10) * 64.0f + 128.0f;
-                float height = 256.0f;
+                float width = Math.Abs((float)(r.Next() % 10) * 64.0f + 128.0f);
+                float height = Math.Abs((float)(r.Next() % 10) * 64.0f + 128.0f);
 
                 if (i == 0) {
                     // Set properties of the sector
@@ -423,14 +421,14 @@ namespace GenerativeDoom
                         ceil = floor + 180 + (r.NextDouble() > 0.5 ? 1 : -1) * 16;
                     }
 
-                    v.pos.x = pv.x - (pwidth / 2 - doorWidth / 2);
+                    v.pos.x = (pv.x + doorWidth / 2) - width / 2;
                     v.pos.y = pv.y + doorHeight;
 
                     newSector(v, width, height, lumi, ceil, floor);
 
                     // Add a door
                     float doorX = (width / 2) * (width > 0 ? 1 : -1);
-                    v.pos.x = (width > 0) ? doorX - (doorWidth / 2) : doorX + (doorWidth / 2) + v.pos.x;
+                    v.pos.x = ((width > 0) ? doorX - (doorWidth / 2) : doorX + (doorWidth / 2)) + v.pos.x;
                     v.pos.y = height + v.pos.y;
 
                     newSector(v, doorWidth, doorHeight, lumi, ceil, floor);

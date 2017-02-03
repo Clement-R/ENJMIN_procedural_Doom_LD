@@ -19,7 +19,6 @@ namespace GenerativeDoom
         public const int TYPE_PLAYER_START = 1;
 
         private IList<DrawnVertex> points;
-        private bool startPointPlaced = false;
 
         public GDForm()
         {
@@ -269,7 +268,7 @@ namespace GenerativeDoom
                 }
             }
 
-            Console.WriteLine("Chevk inter " + measureline + " is " + inter);
+            // Console.WriteLine("Chevk inter " + measureline + " is " + inter);
 
             return inter;
         }
@@ -320,7 +319,7 @@ namespace GenerativeDoom
             
         }
 
-        private void makeOnePath( bool playerStart)
+        private void makeOnePath( bool playerStart, int numberOfRooms)
         {
             Random r = new Random();
 
@@ -368,15 +367,9 @@ namespace GenerativeDoom
             Vector2D pv = new Vector2D();
             
             int pdir = 0;
-            for (int i = 0; i < 5; i++) {
 
-                // TODO
-                // First sector ? Create it
-                // Else get previous door direction and create a sector linked to last door
-                // Choose a direction to go
-                // Create a door
-                // Stock last chosen direction
-
+            for (int i = 0; i < numberOfRooms; i++) {
+                
                 // Game worflow :
                 // Player presse use to open a door, it opens a room with another door.
                 // Using the second door close the first one and start the room
@@ -384,6 +377,8 @@ namespace GenerativeDoom
 
                 // Get previous sector position
                 pv = v.pos;
+                Console.WriteLine("Previous pos : " + v.pos.x + " : " + v.pos.y);
+                int nextDir = 0;
 
                 // Choose height and width of next sector
                 float width = Math.Abs((float)(r.Next() % 10) * 64.0f + 128.0f);
@@ -402,12 +397,90 @@ namespace GenerativeDoom
                     }
 
                     newSector(v, width, height, lumi, ceil, floor);
-                    
-                    // Add a door
-                    float doorX = (width / 2) * (width > 0 ? 1 : -1);
-                    v.pos.x = (width > 0) ? doorX - (doorWidth / 2) : doorX + (doorWidth / 2);
-                    v.pos.y = height;
 
+                    if (playerStart) {
+                        Thing t = addThing(new Vector2D(v.pos.x + width / 2, v.pos.y + height / 2));
+                        t.Type = TYPE_PLAYER_START;
+                        t.Rotate(0);
+                    }
+
+                    // We check all 4 directions to see where we can put it
+                    Line2D l1 = new Line2D();
+                    bool[] dirOk = new bool[4];
+
+                    // Right
+                    l1.v2 = l1.v1 = pv;
+                    l1.v1.x += pwidth;
+                    l1.v2.x += width + 512;
+                    bool droite = !checkIntersect(l1);
+                    l1.v1.y = l1.v2.y = l1.v1.y + height;
+                    droite = droite && !checkIntersect(l1);
+                    dirOk[0] = droite;
+                    // Console.WriteLine("right ok:" + droite);
+
+                    // Left
+                    l1.v2 = l1.v1 = pv;
+                    l1.v2.x -= width + 512;
+                    bool gauche = !checkIntersect(l1);
+                    l1.v1.y = l1.v2.y = l1.v1.y + height;
+                    gauche = gauche && !checkIntersect(l1);
+                    dirOk[1] = gauche;
+                    // Console.WriteLine("left ok:" + gauche);
+
+                    // Up
+                    l1.v2 = l1.v1 = pv;
+                    l1.v1.y = l1.v2.y = l1.v1.y + pheight;
+                    l1.v2.y += height + 512;
+                    bool haut = !checkIntersect(l1);
+                    l1.v1.x = l1.v2.x = l1.v1.x + width;
+                    haut = haut && !checkIntersect(l1);
+                    dirOk[2] = haut;
+                    // Console.WriteLine("up ok:" + haut);
+
+                    // Down
+                    l1.v2 = l1.v1 = pv;
+                    l1.v2.y -= height + 512;
+                    bool bas = !checkIntersect(l1);
+                    l1.v1.x = l1.v2.x = l1.v1.x + width;
+                    bas = bas && !checkIntersect(l1);
+                    dirOk[3] = bas;
+                    // Console.WriteLine("Down ok:" + bas);
+
+                    bool oneDirOk = haut || bas || gauche || droite;
+
+                    nextDir = pdir;
+                    if (!oneDirOk)
+                        Console.WriteLine("No direction available");
+                    else {
+                        int nbTry = 0;
+                        while ((!dirOk[nextDir]) && nbTry++ < 100)
+                            nextDir = r.Next() % 4;
+                    }
+
+                    switch (nextDir) {
+                        case 0:
+                            Console.WriteLine("Right !");
+                            v.pos.x += width;
+                            v.pos.y += (height /2) - (doorHeight / 2);
+                            break;
+                        case 1:
+                            Console.WriteLine("Left !");
+                            v.pos.x -= doorWidth;
+                            v.pos.y += (height / 2) - (doorHeight / 2);
+                            break;
+                        case 2:
+                            Console.WriteLine("Up !");
+                            v.pos.x += (width / 2) - (doorWidth / 2);
+                            v.pos.y += height;
+                            break;
+                        case 3:
+                            Console.WriteLine("Down !");
+                            v.pos.x += (width / 2) - (doorWidth / 2);
+                            v.pos.y -= doorHeight;
+                            break;
+                    }
+                    
+                    // Add the door
                     newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
                 } else {
                     // Set properties of the sector
@@ -421,93 +494,117 @@ namespace GenerativeDoom
                         ceil = floor + 180 + (r.NextDouble() > 0.5 ? 1 : -1) * 16;
                     }
 
+                    switch (pdir) {
+                        case 0:
+                            Console.WriteLine("Previous was Right !");
+                            v.pos.x = pv.x + doorWidth;
+                            v.pos.y = pv.y - (height / 2) + (doorHeight / 2);
+                            break;
+                        case 1:
+                            Console.WriteLine("Previous was Left !");
+                            v.pos.x = pv.x - width;
+                            v.pos.y = pv.y - (height / 2) + (doorHeight / 2);
+                            break;
+                        case 2:
+                            Console.WriteLine("Previous was Up !");
+                            v.pos.x = pv.x - (width / 2) + (doorWidth / 2);
+                            v.pos.y = pv.y + doorHeight;
+                            break;
+                        case 3:
+                            Console.WriteLine("Previous was Down !");
+                            v.pos.x = pv.x - (width / 2) + (doorWidth / 2);
+                            v.pos.y = pv.y - height;
+                            break;
+                    }
+
+                    /*
                     v.pos.x = (pv.x + doorWidth / 2) - width / 2;
                     v.pos.y = pv.y + doorHeight;
+                    */
 
                     newSector(v, width, height, lumi, ceil, floor);
 
-                    // Add a door
-                    float doorX = (width / 2) * (width > 0 ? 1 : -1);
-                    v.pos.x = ((width > 0) ? doorX - (doorWidth / 2) : doorX + (doorWidth / 2)) + v.pos.x;
-                    v.pos.y = height + v.pos.y;
+                    if(i != numberOfRooms - 1) {
+                        // We check all 4 directions to see where we can put it
+                        Line2D l1 = new Line2D();
+                        bool[] dirOk = new bool[4];
 
-                    newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
+                        // Right
+                        l1.v2 = l1.v1 = pv;
+                        l1.v1.x += pwidth;
+                        l1.v2.x += width + 512;
+                        bool droite = !checkIntersect(l1);
+                        l1.v1.y = l1.v2.y = l1.v1.y + height;
+                        droite = droite && !checkIntersect(l1);
+                        dirOk[0] = droite;
+                        // Console.WriteLine("right ok:" + droite);
+
+                        // Left
+                        l1.v2 = l1.v1 = pv;
+                        l1.v2.x -= width + 512;
+                        bool gauche = !checkIntersect(l1);
+                        l1.v1.y = l1.v2.y = l1.v1.y + height;
+                        gauche = gauche && !checkIntersect(l1);
+                        dirOk[1] = gauche;
+                        // Console.WriteLine("left ok:" + gauche);
+
+                        // Up
+                        l1.v2 = l1.v1 = pv;
+                        l1.v1.y = l1.v2.y = l1.v1.y + pheight;
+                        l1.v2.y += height + 512;
+                        bool haut = !checkIntersect(l1);
+                        l1.v1.x = l1.v2.x = l1.v1.x + width;
+                        haut = haut && !checkIntersect(l1);
+                        dirOk[2] = haut;
+                        // Console.WriteLine("up ok:" + haut);
+
+                        // Down
+                        l1.v2 = l1.v1 = pv;
+                        l1.v2.y -= height + 512;
+                        bool bas = !checkIntersect(l1);
+                        l1.v1.x = l1.v2.x = l1.v1.x + width;
+                        bas = bas && !checkIntersect(l1);
+                        dirOk[3] = bas;
+                        // Console.WriteLine("Down ok:" + bas);
+
+                        bool oneDirOk = haut || bas || gauche || droite;
+
+                        nextDir = pdir;
+                        if (!oneDirOk)
+                            Console.WriteLine("No direction available");
+                        else {
+                            int nbTry = 0;
+                            while ((!dirOk[nextDir] || pdir == nextDir) && nbTry++ < 100)
+                                nextDir = r.Next() % 4;
+                        }
+
+                        switch (nextDir) {
+                            case 0:
+                                Console.WriteLine("Right !");
+                                v.pos.x += width;
+                                v.pos.y += (height / 2) - (doorHeight / 2);
+                                break;
+                            case 1:
+                                Console.WriteLine("Left !");
+                                v.pos.x -= doorWidth;
+                                v.pos.y += (height / 2) - (doorHeight / 2);
+                                break;
+                            case 2:
+                                Console.WriteLine("Up !");
+                                v.pos.x += (width / 2) - (doorWidth / 2);
+                                v.pos.y += height;
+                                break;
+                            case 3:
+                                Console.WriteLine("Down !");
+                                v.pos.x += (width / 2) - (doorWidth / 2);
+                                v.pos.y -= doorHeight;
+                                break;
+                        }
+
+                        // Add the door
+                        newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
+                    }   
                 }
-                
-                /*
-                // We check all 4 directions to see where we can put it
-                Line2D l1 = new Line2D();
-                bool[] dirOk = new bool[4];
-
-                // Right
-                l1.v2 = l1.v1 = pv;
-                l1.v1.x += pwidth;
-                l1.v2.x += width + 256;
-                bool droite = !checkIntersect(l1);
-                l1.v1.y = l1.v2.y = l1.v1.y + height;
-                droite = droite && !checkIntersect(l1);
-                dirOk[0] = droite;
-                Console.WriteLine("right ok:" + droite);
-
-                // Left
-                l1.v2 = l1.v1 = pv;
-                l1.v2.x -= width + 256;
-                bool gauche = !checkIntersect(l1);
-                l1.v1.y = l1.v2.y = l1.v1.y + height;
-                gauche = gauche && !checkIntersect(l1);
-                dirOk[1] = gauche;
-                Console.WriteLine("left ok:" + gauche);
-
-                // Up
-                l1.v2 = l1.v1 = pv;
-                l1.v1.y = l1.v2.y = l1.v1.y + pheight;
-                l1.v2.y += height + 256;
-                bool haut = !checkIntersect(l1);
-                l1.v1.x = l1.v2.x = l1.v1.x + width;
-                haut = haut && !checkIntersect(l1);
-                dirOk[2] = haut;
-                Console.WriteLine("up ok:" + haut);
-
-                // Down
-                l1.v2 = l1.v1 = pv;
-                l1.v2.y -= height + 256;
-                bool bas = !checkIntersect(l1);
-                l1.v1.x = l1.v2.x = l1.v1.x + width;
-                bas = bas && !checkIntersect(l1);
-                dirOk[3] = bas;
-                Console.WriteLine("Down ok:" + bas);
-
-                bool oneDirOk = haut || bas || gauche || droite;
-
-                int nextDir = pdir;
-                if (!oneDirOk)
-                    Console.WriteLine("No direction available");
-                else {
-                    int nbTry = 0;
-                    while ((!dirOk[nextDir] || pdir == nextDir) && nbTry++ < 100)
-                        nextDir = r.Next() % 4;
-                }
-
-                switch (nextDir) {
-                    case 0:
-                        Console.WriteLine("Right !");
-                        v.pos.x += pwidth;
-                        break;
-                    case 1:
-                        Console.WriteLine("Left !");
-                        v.pos.x -= width;
-                        break;
-                    case 2:
-                        Console.WriteLine("Up !");
-                        v.pos.y += pheight;
-                        break;
-                    case 3:
-                        Console.WriteLine("Down !");
-                        v.pos.y -= height;
-                        break;
-
-                }
-                */
                 
                 /*
                 // Add things to the room
@@ -543,7 +640,9 @@ namespace GenerativeDoom
                 pheight = height;
                 pceil = ceil;
                 pfloor = floor;
-                // pdir = nextDir;
+                pdir = nextDir;
+
+                progressBar1.Value += 1;
 
                 // Handle thread interruption
                 try { Thread.Sleep(0); }
@@ -555,9 +654,9 @@ namespace GenerativeDoom
         {
             Console.WriteLine("Trying to do some magic !!");
 
-            makeOnePath(true);
-            makeOnePath(false);
-            makeOnePath(false);
+            makeOnePath(true, (int) numericUpDown1.Value);
+            makeOnePath(false, (int) numericUpDown1.Value);
+            makeOnePath(false, (int) numericUpDown1.Value);
 
             correctMissingTex();
 
@@ -574,14 +673,19 @@ namespace GenerativeDoom
 
         private void btnGenerate_Click(object sender, EventArgs e)
         {
-            if(startPointPlaced) {
-                makeOnePath(false);
-            } else {
-                makeOnePath(true);
-                startPointPlaced = true;
-            }
-            
+            progressBar1.Minimum = 0;
+            progressBar1.Maximum = (int)numericUpDown1.Value;
+            progressBar1.Value = 0;
+                
+            makeOnePath(true, (int)numericUpDown1.Value);
+
             correctMissingTex();
+
+            progressBar1.Value = 0;
+        }
+
+        private void label1_Click(object sender, EventArgs e) {
+
         }
     }
 }

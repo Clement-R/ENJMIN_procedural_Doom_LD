@@ -357,6 +357,9 @@ namespace GenerativeDoom
             float pwidth = 0.0f;
             float pheight = 0.0f;
 
+            float doorHeight = 60;
+            float doorWidth = 80;
+
             int lumi = 200;
             int ceil = (int)(r.NextDouble() * 128 + 128);
             int floor = (int)(r.NextDouble() * 128 + 128);
@@ -365,24 +368,75 @@ namespace GenerativeDoom
             Vector2D pv = new Vector2D();
             
             int pdir = 0;
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 5; i++) {
 
                 // TODO
                 // First sector ? Create it
-                // Else get previous direction and create a sector linked to last door
+                // Else get previous door direction and create a sector linked to last door
                 // Choose a direction to go
                 // Create a door
                 // Stock last chosen direction
+
+                // Game worflow :
+                // Player presse use to open a door, it opens a room with another door.
+                // Using the second door close the first one and start the room
+                // Killing the enemies let the player use the other doors
 
                 // Get previous sector position
                 pv = v.pos;
 
                 // Choose height and width of next sector
                 // float width = (float)(r.Next() % 10) * 64.0f + 128.0f;
-                float width = 128.0f;
+                float width = 256.0f;
                 // float height = (float)(r.Next() % 10) * 64.0f + 128.0f;
-                float height = 128.0f;
+                float height = 256.0f;
 
+                if (i == 0) {
+                    // Set properties of the sector
+                    lumi = Math.Min(256, Math.Max(0, lumi + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
+
+                    floor = Math.Min(256, Math.Max(0, pfloor + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
+                    ceil = Math.Min(256, Math.Max(0, pceil + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
+
+                    if (ceil - floor < 100) {
+                        floor = pfloor;
+                        ceil = floor + 180 + (r.NextDouble() > 0.5 ? 1 : -1) * 16;
+                    }
+
+                    newSector(v, width, height, lumi, ceil, floor);
+                    
+                    // Add a door
+                    float doorX = (width / 2) * (width > 0 ? 1 : -1);
+                    v.pos.x = (width > 0) ? doorX - (doorWidth / 2) : doorX + (doorWidth / 2);
+                    v.pos.y = height;
+
+                    newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
+                } else {
+                    // Set properties of the sector
+                    lumi = Math.Min(256, Math.Max(0, lumi + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
+
+                    floor = Math.Min(256, Math.Max(0, pfloor + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
+                    ceil = Math.Min(256, Math.Max(0, pceil + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
+
+                    if (ceil - floor < 100) {
+                        floor = pfloor;
+                        ceil = floor + 180 + (r.NextDouble() > 0.5 ? 1 : -1) * 16;
+                    }
+
+                    v.pos.x = pv.x - (pwidth / 2 - doorWidth / 2);
+                    v.pos.y = pv.y + doorHeight;
+
+                    newSector(v, width, height, lumi, ceil, floor);
+
+                    // Add a door
+                    float doorX = (width / 2) * (width > 0 ? 1 : -1);
+                    v.pos.x = (width > 0) ? doorX - (doorWidth / 2) : doorX + (doorWidth / 2) + v.pos.x;
+                    v.pos.y = height + v.pos.y;
+
+                    newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
+                }
+                
+                /*
                 // We check all 4 directions to see where we can put it
                 Line2D l1 = new Line2D();
                 bool[] dirOk = new bool[4];
@@ -455,28 +509,10 @@ namespace GenerativeDoom
                         break;
 
                 }
-
-                lumi = Math.Min(256, Math.Max(0, lumi + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
-
-                floor = Math.Min(256, Math.Max(0, pfloor + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
-                ceil = Math.Min(256, Math.Max(0, pceil + (r.NextDouble() > 0.5 ? 1 : -1) * 16));
-
-                if (ceil - floor < 100) {
-                    floor = pfloor;
-                    ceil = floor + 180 + (r.NextDouble() > 0.5 ? 1 : -1) * 16;
-                }
-
-                newSector(v, width,
-                    height,
-                    lumi,
-                    ceil,
-                    floor);
+                */
                 
-                if (i == 0 && playerStart) {
-                    Thing t = addThing(new Vector2D(v.pos.x + width / 2, v.pos.y + height / 2));
-                    t.Type = TYPE_PLAYER_START;
-                    t.Rotate(0);
-                }
+                /*
+                // Add things to the room
                 else if (i == 1) {
                     addThing(new Vector2D(v.pos.x + width / 2, v.pos.y + height / 2), "weapons");
                 }
@@ -503,13 +539,13 @@ namespace GenerativeDoom
                 while (r.NextDouble() > 0.5f)
                     addThing(new Vector2D(v.pos.x + width / 2 + ((float)r.NextDouble() * (width / 2)) - width / 4,
                         v.pos.y + height / 2 + ((float)r.NextDouble() * (height / 2)) - height / 4), "decoration", (float)r.NextDouble());
-
+                */
 
                 pwidth = width;
                 pheight = height;
                 pceil = ceil;
                 pfloor = floor;
-                pdir = nextDir;
+                // pdir = nextDir;
 
                 // Handle thread interruption
                 try { Thread.Sleep(0); }

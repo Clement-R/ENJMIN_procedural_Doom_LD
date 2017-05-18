@@ -19,6 +19,7 @@ namespace GenerativeDoom
         public const int TYPE_PLAYER_START = 1;
 
         private IList<DrawnVertex> points;
+        private bool [,] map = new bool[20, 20];
 
         public GDForm()
         {
@@ -306,17 +307,84 @@ namespace GenerativeDoom
             
         }
     
-
-        private void showCategories()
-        {
-            lbCategories.Items.Clear();
-            IList<ThingCategory> cats = General.Map.Data.ThingCategories;
-            foreach(ThingCategory cat in cats)
-            {
-                if (!lbCategories.Items.Contains(cat.Name))
-                    lbCategories.Items.Add(cat.Name);
+        private void FillMap() {
+            for (int i = 0; i < 20; i++) {
+                for (int j = 0; j < 20; j++) {
+                    map[i,j] = false;
+                }
             }
+
+            // Initialize random number generator
+            Random r = new Random();
             
+            // Pick a random position on the map
+            int x = r.Next(0, 20);
+            int y = r.Next(0, 20);
+
+            // And mark it as floor
+            map[x, y] = true;
+
+            // We choose a number of rooms
+            int numberOfRooms = (int)numericUpDown1.Value;
+            // We now do a drunkark walk to pick positions along a path in the grid
+            while(numberOfRooms != 0) {
+                // Pick next direction
+                bool valid = false;
+                int nextDir = 0;
+                while (!valid) {
+                    // 0 - UP
+                    // 1 - RIGHT
+                    // 2 - DOWN
+                    // 3 - LEFT
+                    nextDir = r.Next(0, 5);
+
+                    // Check if this is a valid direction (not going out of bounds)
+                    switch (nextDir) {
+                        case 0:
+                            if(y + 1 < 20) {
+                                valid = true;
+                            }
+                            break;
+                        case 1:
+                            if(x + 1 < 20) {
+                                valid = true;
+                            }
+                            break;
+                        case 2:
+                            if (y - 1 >= 0) {
+                                valid = true;
+                            }
+                            break;
+                        case 3:
+                            if (x - 1 >= 0) {
+                                valid = true;
+                            }
+                            break;
+                    }
+                }
+
+
+                // Move to that direction and mark it as floor
+                switch (nextDir) {
+                    case 0:
+                        y += 1;
+                        break;
+                    case 1:
+                        x += 1;
+                        break;
+                    case 2:
+                        y -= 1;
+                        break;
+                    case 3:
+                        x -= 1;
+                        break;
+                }
+
+                if(!map[x, y]) {
+                    map[x, y] = true;
+                    numberOfRooms--;
+                }
+            }
         }
 
         private int getDirection(Vector2D pv, float width, float pwidth, float height, float pheight) {
@@ -325,7 +393,6 @@ namespace GenerativeDoom
              *      - Get middle of the line def
              *      - Cast a ray and check intersect
             */
-
             Random r = new Random();
 
             // We check all 4 directions to see where we can put it
@@ -337,65 +404,48 @@ namespace GenerativeDoom
             l1.v1.x += width;
             l1.v2.x += width + 512;
             bool droite = !checkIntersect(l1);
-            l1.v1.y = l1.v2.y = l1.v1.y + height / 2;
-            droite = droite && !checkIntersect(l1);
-            dirOk[0] = droite;
-
-            /*
-            l1.v2 = l1.v1 = pv;
-            l1.v1.x += pwidth;
-            l1.v2.x += width + 512;
-            bool droite = !checkIntersect(l1);
             l1.v1.y = l1.v2.y = l1.v1.y + height;
             droite = droite && !checkIntersect(l1);
             dirOk[0] = droite;
-            */
-
+            
             // Left
-            /*
             l1.v2 = l1.v1 = pv;
-            l1.v2.x -= width + 512;
+            l1.v2.x -= 512;
             bool gauche = !checkIntersect(l1);
             l1.v1.y = l1.v2.y = l1.v1.y + height;
             gauche = gauche && !checkIntersect(l1);
             dirOk[1] = gauche;
-            */
 
             // Up
-            /*
             l1.v2 = l1.v1 = pv;
-            l1.v1.y = l1.v2.y = l1.v1.y + pheight;
+            l1.v1.y = l1.v2.y = l1.v1.y + height;
             l1.v2.y += height + 512;
             bool haut = !checkIntersect(l1);
             l1.v1.x = l1.v2.x = l1.v1.x + width;
             haut = haut && !checkIntersect(l1);
             dirOk[2] = haut;
-            */
 
             // Down
-            /*
             l1.v2 = l1.v1 = pv;
             l1.v2.y -= height + 512;
             bool bas = !checkIntersect(l1);
             l1.v1.x = l1.v2.x = l1.v1.x + width;
             bas = bas && !checkIntersect(l1);
             dirOk[3] = bas;
-            */
 
-            // bool oneDirOk = haut || bas || gauche || droite;
-            bool oneDirOk = false;
+            bool oneDirOk = haut || bas || gauche || droite;
 
-            // TODO : Shrink room size to fit
-
-            int nextDir = 0;
+            int nextDir = r.Next() % 4;
             if (!oneDirOk) {
                 Console.WriteLine("No direction available");
             }
             else {
                 int nbTry = 0;
-                while ((!dirOk[nextDir]) && nbTry++ < 100)
+                nextDir = r.Next() % 4;
+                while ((!dirOk[nextDir]) && nbTry++ < 100) {
                     nextDir = r.Next() % 4;
                     Console.WriteLine(nextDir);
+                }
             }
             
             return nextDir;
@@ -422,13 +472,8 @@ namespace GenerativeDoom
             int pdir = 0;
 
             for (int i = 0; i < numberOfRooms; i++) {
-                
-                // Game worflow :
-                // Player presse use to open a door, it opens a room with another door.
-                // Using the second door close the first one and start the room
-                // Killing the enemies let the player use the other doors
-
                 // Get previous sector position
+                Console.WriteLine("Previous vector pos : " + v.pos);
                 pv = v.pos;
                 int nextDir = 0;
 
@@ -497,22 +542,22 @@ namespace GenerativeDoom
 
                     switch (pdir) {
                         case 0:
-                            // Console.WriteLine("Previous was Right !");
+                            Console.WriteLine("Previous was Right !");
                             v.pos.x = pv.x + doorWidth;
                             v.pos.y = pv.y - (height / 2) + (doorHeight / 2);
                             break;
                         case 1:
-                            // Console.WriteLine("Previous was Left !");
+                            Console.WriteLine("Previous was Left !");
                             v.pos.x = pv.x - width;
                             v.pos.y = pv.y - (height / 2) + (doorHeight / 2);
                             break;
                         case 2:
-                            // Console.WriteLine("Previous was Up !");
+                            Console.WriteLine("Previous was Up !");
                             v.pos.x = pv.x - (width / 2) + (doorWidth / 2);
                             v.pos.y = pv.y + doorHeight;
                             break;
                         case 3:
-                            // Console.WriteLine("Previous was Down !");
+                            Console.WriteLine("Previous was Down !");
                             v.pos.x = pv.x - (width / 2) + (doorWidth / 2);
                             v.pos.y = pv.y - height;
                             break;
@@ -558,17 +603,17 @@ namespace GenerativeDoom
                         
                         switch (nextDir) {
                             case 0:
-                                // Console.WriteLine("Right !");
+                                Console.WriteLine("Right !");
                                 v.pos.x += width;
                                 v.pos.y += (height / 2) - (doorHeight / 2);
                                 break;
                             case 1:
-                                // Console.WriteLine("Left !");
+                                Console.WriteLine("Left !");
                                 v.pos.x -= doorWidth;
                                 v.pos.y += (height / 2) - (doorHeight / 2);
                                 break;
                             case 2:
-                                // Console.WriteLine("Up !");
+                                Console.WriteLine("Up !");
                                 v.pos.x += (width / 2) - (doorWidth / 2);
                                 v.pos.y += height;
                                 break;
@@ -589,8 +634,7 @@ namespace GenerativeDoom
                 pceil = ceil;
                 pfloor = floor;
                 pdir = nextDir;
-
-                progressBar1.Value += 1;
+                
 
                 // Handle thread interruption
                 try { Thread.Sleep(0); }
@@ -598,38 +642,135 @@ namespace GenerativeDoom
             }
         }
 
-        private void btnDoMagic_Click(object sender, EventArgs e)
-        {
-            Console.WriteLine("Trying to do some magic !!");
-
-            makeOnePath(true, (int) numericUpDown1.Value);
-            makeOnePath(false, (int) numericUpDown1.Value);
-            makeOnePath(false, (int) numericUpDown1.Value);
-
-            correctMissingTex();
-
-            Console.WriteLine("Did I ? Magic ?");
+        private void DebugMap() {
+            for (int i = 0; i < 20; i++) {
+                string line = "";
+                for (int j = 0; j < 20; j++) {
+                    if(map[i, j]) {
+                        line += " " + "1";
+                    } else {
+                        line += " " + "0";
+                    }
+                }
+                Console.WriteLine(line);
+            }
         }
 
         private void btnAnalysis_Click(object sender, EventArgs e)
         {
-            //foreach (ThingTypeInfo ti in General.Map.Data.ThingTypes)
-            //Console.WriteLine(ti.Category.Name);
-            showCategories();
+            // 
+            FillMap();
+            DebugMap();
+            DrawMap();
+        }
 
+        private void DrawMap() {
+            DrawnVertex v = new DrawnVertex();
+            Random r = new Random();
+
+            float doorHeight = 80;
+            float doorWidth = 80;
+
+            int lumi = 200;
+            int ceil = 256;
+            int floor = 0;
+
+            float width = 256;
+            float height = 256;
+
+            bool firstRoom = true;
+
+            // Place the rooms and the things
+            for (int i = 0; i < 20; i++) {
+                for (int j = 0; j < 20; j++) {
+                    if (map[i, j]) {
+                        if (i != 0) {
+                            v.pos.x = i * width + (doorWidth * i);
+                        }
+                        else {
+                            v.pos.x = i * width;
+                        }
+
+                        if (j != 0) {
+                            v.pos.y = j * height + (doorHeight * j);
+                        }
+                        else {
+                            v.pos.y = j * height;
+                        }
+
+                        newSector(v, width, height, lumi, ceil, floor);
+
+                        if (firstRoom) {
+                            firstRoom = false;
+                            Thing t = addThing(new Vector2D(v.pos.x + width / 2, v.pos.y + height / 2));
+                            t.Type = TYPE_PLAYER_START;
+                            t.Rotate(0);
+                        }
+
+                        // SPAWN THINGS
+
+                        if (i == 0 && j == 0) {
+                            addThing(new Vector2D(v.pos.x + width / 2, v.pos.y + height / 2), "weapons");
+                        }
+                        else if (i % 3 == 0) {
+                            while (r.NextDouble() > 0.3f)
+                                addThing(new Vector2D(v.pos.x + width / 2 + ((float)r.NextDouble() * (width / 2)) - width / 4,
+                                    v.pos.y + height / 2 + ((float)r.NextDouble() * (height / 2)) - height / 4), "monsters");
+                        }
+                        if (i % 3 == 0) {
+                            do {
+                                addThing(new Vector2D(v.pos.x + width / 2 + ((float)r.NextDouble() * (width / 2)) - width / 4,
+                                    v.pos.y + height / 2 + ((float)r.NextDouble() * (height / 2)) - height / 4), "ammunition");
+                            } while (r.NextDouble() > 0.3f);
+                        }
+                        if (i % 5 == 0) {
+                            do {
+                                addThing(new Vector2D(v.pos.x + width / 2 + ((float)r.NextDouble() * (width / 2)) - width / 4,
+                                    v.pos.y + height / 2 + ((float)r.NextDouble() * (height / 2)) - height / 4), "health");
+                            } while (r.NextDouble() > 0.5f);
+                            addThing(new Vector2D(v.pos.x + width / 2, v.pos.y + height / 2), "weapons", 0.3f);
+                        }
+
+                        while (r.NextDouble() > 0.5f)
+                            addThing(new Vector2D(v.pos.x + width / 2 + ((float)r.NextDouble() * (width / 2)) - width / 4,
+                                v.pos.y + height / 2 + ((float)r.NextDouble() * (height / 2)) - height / 4), "decoration", (float)r.NextDouble());
+                    }
+                }
+            }
+
+            // Place the doors
+            for (int i = 0; i < 20; i++) {
+                for (int j = 0; j < 20; j++) {
+                    if (map[i, j]) {
+
+                        // TOP
+                        if (j + 1 < 20) {
+                            if(map[i, j +1]) {
+                                v.pos.x = i * width + ((width / 2) - (doorWidth / 2)) + (doorWidth * i);
+                                v.pos.y = j * height + height + (doorHeight * j);
+
+                                newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
+                            }
+                        }
+                        
+                        // RIGHT
+                        if (i + 1 < 20) {
+                            if (map[i + 1, j]) {
+                                v.pos.x = i * width + width + (doorWidth * i);
+                                v.pos.y = j * height + ((height / 2) - (doorHeight / 2)) + (doorHeight * j);
+
+                                newSector(v, doorWidth, doorHeight, lumi, ceil, floor);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void btnGenerate_Click(object sender, EventArgs e)
         {
-            progressBar1.Minimum = 0;
-            progressBar1.Maximum = (int)numericUpDown1.Value;
-            progressBar1.Value = 0;
-                
             makeOnePath(true, (int)numericUpDown1.Value);
-
             correctMissingTex();
-
-            progressBar1.Value = 0;
         }
 
         private void label1_Click(object sender, EventArgs e) {

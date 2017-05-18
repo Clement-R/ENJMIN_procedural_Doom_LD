@@ -221,4 +221,3 @@ F:\Documents\ENJMIN\Semestre2\EC204_LD_generatif\doom\doombuilder\Source\Core\ob
 F:\Documents\ENJMIN\Semestre2\EC204_LD_generatif\doom\doombuilder\Source\Core\obj\x86\Debug\Builder.csproj.GenerateResource.Cache
 F:\Documents\ENJMIN\Semestre2\EC204_LD_generatif\doom\doombuilder\Source\Core\obj\x86\Debug\Builder.exe
 F:\Documents\ENJMIN\Semestre2\EC204_LD_generatif\doom\doombuilder\Source\Core\obj\x86\Debug\Builder.pdb
-F:\Documents\ENJMIN\Semestre2\EC204_LD_generatif\doom\doombuilder\Source\Core\obj\x86\Debug\Builder.csprojResolveAssemblyReference.cache
